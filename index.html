@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kwestionariusz Inteligencji Wielorakich - Profil Ucznia</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        @media print {
+            .no-print { display: none !important; }
+            .print-break { page-break-before: always; }
+            body { background: white; color: black; }
+            .print-card { break-inside: avoid; border: 1px solid #e2e8f0; margin-bottom: 1rem; }
+            .shadow-sm, .shadow-md, .shadow-lg { box-shadow: none !important; }
+        }
+        .scale-btn { transition: all 0.2s ease-in-out; }
+        .scale-btn.selected { 
+            background-color: #2563eb; 
+            color: white; 
+            border-color: #2563eb; 
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2);
+        }
+        .glass-header {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen pb-20">
+
+    <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-10">
+        
+        <!-- Nagłówek -->
+        <header class="text-center mb-12">
+            <div class="inline-block bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-semibold mb-4 tracking-wide uppercase">
+                Doradztwo Zawodowe
+            </div>
+            <h1 class="text-4xl md:text-5xl font-extrabold text-slate-900 mb-4 tracking-tight">Twój profil wielorakiej inteligencji</h1>
+            <p class="text-lg text-slate-600 max-w-2xl mx-auto">Kwestionariusz bazujący na koncepcji Howarda Gardnera, pomagający odkryć Twoje mocne strony, preferowane sposoby nauki oraz potencjalne ścieżki kariery.</p>
+            
+            <div class="mt-8 bg-white p-6 rounded-2xl shadow-sm border border-slate-200 text-left max-w-3xl mx-auto relative overflow-hidden">
+                <div class="absolute top-0 left-0 w-1 h-full bg-blue-500"></div>
+                <h3 class="font-semibold text-lg mb-2 text-slate-800">Jak wypełnić test?</h3>
+                <p class="text-slate-600">Przeczytaj poniższe stwierdzenia i oceń w skali od 0 do 5, na ile do Ciebie pasują. <br>
+                <span class="font-medium text-slate-800">0</span> – zupełnie do mnie nie pasuje <br>
+                <span class="font-medium text-slate-800">5</span> – idealnie mnie opisuje<br>
+                Odpowiadaj szczerze, tu nie ma złych odpowiedzi.</p>
+            </div>
+        </header>
+
+        <!-- Pasek postępu (Sticky) -->
+        <div id="progress-container" class="glass-header sticky top-0 z-50 p-4 border-b border-slate-200 shadow-sm mb-10 rounded-b-2xl no-print transition-all duration-300">
+            <div class="max-w-3xl mx-auto">
+                <div class="flex justify-between text-sm font-semibold text-slate-700 mb-2">
+                    <span>Udzielone odpowiedzi:</span>
+                    <span id="progress-text" class="text-blue-600">0 / 40</span>
+                </div>
+                <div class="w-full bg-slate-100 rounded-full h-3 overflow-hidden border border-slate-200">
+                    <div id="progress-bar" class="bg-gradient-to-r from-blue-500 to-blue-600 h-3 rounded-full transition-all duration-500 ease-out" style="width: 0%"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Kontener na pytania -->
+        <div id="questions-container" class="space-y-6 max-w-3xl mx-auto mb-12">
+            <!-- Pytania generowane przez JS -->
+        </div>
+
+        <!-- Przycisk obliczania -->
+        <div class="text-center no-print max-w-3xl mx-auto">
+            <button id="calculate-btn" class="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-bold text-lg py-4 px-10 rounded-xl shadow-lg shadow-blue-200 disabled:opacity-50 disabled:cursor-not-allowed transition-all" disabled>
+                Generuj mój profil inteligencji
+            </button>
+            <p id="error-msg" class="text-red-500 mt-3 font-medium hidden">Musisz odpowiedzieć na wszystkie pytania, aby kontynuować.</p>
+        </div>
+
+        <!-- Sekcja Wyników (domyślnie ukryta) -->
+        <div id="results-section" class="hidden mt-16 max-w-4xl mx-auto">
+            <div class="text-center mb-10 print-break">
+                <h2 class="text-4xl font-extrabold text-slate-900 mb-4">Twój spersonalizowany wynik</h2>
+                <p class="text-slate-600 text-lg">Poniżej znajduje się Twój profil wielorakiej inteligencji. Sprawdź, w jakich obszarach wykazujesz największy potencjał.</p>
+            </div>
+            
+            <!-- Wykres -->
+            <div class="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-slate-200 mb-12 print-card">
+                <canvas id="resultsChart" width="400" height="200"></canvas>
+            </div>
+
+            <!-- Dominujące Inteligencje (Top 3) -->
+            <h3 class="text-2xl font-bold mb-6 text-slate-800 border-b pb-2 border-slate-200">Twoje dominujące typy inteligencji</h3>
+            <div id="top-results" class="space-y-6 mb-12">
+                <!-- Generowane przez JS -->
+            </div>
+
+            <!-- Pozostałe Inteligencje -->
+            <h3 class="text-xl font-bold mb-6 text-slate-800 border-b pb-2 border-slate-200">Pozostałe obszary</h3>
+            <div id="other-results" class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
+                <!-- Generowane przez JS -->
+            </div>
+
+            <!-- Podsumowanie / Discalimer -->
+            <div class="bg-blue-50 p-6 rounded-2xl border border-blue-100 text-slate-800 print-card">
+                <h4 class="font-bold text-lg mb-2 flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-600" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+                    </svg>
+                    Wskazówka doradcy zawodowego
+                </h4>
+                <p class="text-sm leading-relaxed">
+                    Test wielorakich inteligencji jest narzędziem pomocniczym. Wyniki wskazują na Twoje obecne preferencje i naturalne predyspozycje, ale ludzki mózg jest plastyczny – każdą z inteligencji można rozwijać poprzez trening. Niższy wynik w danej kategorii nie blokuje Ci drogi do wymarzonego zawodu, a jedynie sugeruje, że jego opanowanie może wymagać od Ciebie więcej pracy lub znalezienia własnej, unikalnej metody nauki. W przypadku wątpliwości dotyczących wyboru szkoły ponadpodstawowej, skonsultuj wyniki ze szkolnym doradcą zawodowym.
+                </p>
+            </div>
+
+            <!-- Drukuj -->
+            <div class="text-center mt-12 no-print">
+                <button onclick="window.print()" class="bg-slate-800 hover:bg-slate-900 text-white font-bold py-3 px-8 rounded-xl shadow-lg transition-colors inline-flex items-center gap-3">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                    </svg>
+                    Drukuj Raport / Zapisz do PDF
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const questions = [
+            { id: 1, text: "Lubię rozwiązywać zagadki i problemy logiczne.", type: "Matematyczno-logiczna" },
+            { id: 2, text: "Jestem dobry w liczeniu w pamięci, szacowaniu i mierzeniu.", type: "Matematyczno-logiczna" },
+            { id: 3, text: "Jestem dobry w wyszukiwaniu połączeń pomiędzy zagadnieniami.", type: "Matematyczno-logiczna" },
+            { id: 4, text: "Lubię przedmioty ścisłe i techniczne.", type: "Matematyczno-logiczna" },
+            { id: 5, text: "Potrafię dobrze zaplanować czas, jaki poświęcam na pracę domową i uczę się dobrze dzięki logicznym wyjaśnieniom.", type: "Matematyczno-logiczna" },
+            { id: 6, text: "Lubię słowa - czytanie książek, chodzenie do teatru, poezję.", type: "Językowa" },
+            { id: 7, text: "Lubię rozwiązywać krzyżówki i zagadki słowne.", type: "Językowa" },
+            { id: 8, text: "Łatwo uczę się z książek, kaset, Internetu i wykładów.", type: "Językowa" },
+            { id: 9, text: "Jestem dobrym rozmówcą, posługuję się bogatym słownictwem.", type: "Językowa" },
+            { id: 10, text: "Dobrze piszę, np. opowiadania, poezję, listy, polecenia.", type: "Językowa" },
+            { id: 11, text: "Lubię ćwiczenia fizyczne.", type: "Ruchowa" },
+            { id: 12, text: "Uczę się dobrze, gdy mogę coś wykonać.", type: "Ruchowa" },
+            { id: 13, text: "Jestem dobry w sporcie i grach.", type: "Ruchowa" },
+            { id: 14, text: "Mam zdolności manualne, np. potrafię sporządzać modele, majsterkować, szyć.", type: "Ruchowa" },
+            { id: 15, text: "W tańcu czuję się jak ryba w wodzie.", type: "Ruchowa" },
+            { id: 16, text: "Jestem dobry w tworzeniu muzyki, śpiewaniu lub graniu na instrumentach.", type: "Muzyczna" },
+            { id: 17, text: "Z łatwością zapamiętuję wiersze, poezję i rymowanki.", type: "Muzyczna" },
+            { id: 18, text: "Często słucham muzyki i łatwo przychodzi mi rozpoznawanie melodii.", type: "Muzyczna" },
+            { id: 19, text: "Mam dobre wyczucie rytmu.", type: "Muzyczna" },
+            { id: 20, text: "Czytam nuty, umiem komponować muzykę.", type: "Muzyczna" },
+            { id: 21, text: "Jestem wrażliwy na to, co myślą i czują inni.", type: "Interpersonalna" },
+            { id: 22, text: "Jestem przekonujący i potrafię uczyć innych tego, czego się nauczyłem.", type: "Interpersonalna" },
+            { id: 23, text: "Lubię należeć do klubów lub kółek zainteresowań.", type: "Interpersonalna" },
+            { id: 24, text: "Lubię pracować w zespole i dobrze przychodzi mi uczenie się w grupie.", type: "Interpersonalna" },
+            { id: 25, text: "Łatwo zawieram przyjaźnie.", type: "Interpersonalna" },
+            { id: 26, text: "Mam zmysł orientacji i potrafię dobrze oceniać odległości i przestrzenie.", type: "Wizualno-przestrzenna" },
+            { id: 27, text: "Jestem dobry w wyobrażaniu sobie rzeczy w umyśle.", type: "Wizualno-przestrzenna" },
+            { id: 28, text: "Jestem dobrym obserwatorem - dostrzegam rzeczy, których nie zauważają inni.", type: "Wizualno-przestrzenna" },
+            { id: 29, text: "Uczę się z wykresów, diagramów i map.", type: "Wizualno-przestrzenna" },
+            { id: 30, text: "Jestem dobry w sztuce, modelowaniu lub rzeźbieniu.", type: "Wizualno-przestrzenna" },
+            { id: 31, text: "Interesują mnie kwestie związane ze środowiskiem naturalnym.", type: "Przyrodnicza" },
+            { id: 32, text: "Podobają mi się programy przyrodnicze i/lub trzymam w domu zwierzęta.", type: "Przyrodnicza" },
+            { id: 33, text: "Potrafię rozpoznać i nazwać wiele rodzajów kwiatów, roślin i drzew.", type: "Przyrodnicza" },
+            { id: 34, text: "Potrafię wyobrazić sobie siebie pracującego w rolnictwie, albo jako biologa lub astronoma.", type: "Przyrodnicza" },
+            { id: 35, text: "Interesują mnie sprawy związane ze zdrowym życiem, zdrowym jedzeniem, itp.", type: "Przyrodnicza" },
+            { id: 36, text: "Jestem dobry w tworzeniu planów i określaniu swoich celów.", type: "Intrapersonalna" },
+            { id: 37, text: "Lubię pracować/uczyć się samotnie i w ciszy.", type: "Intrapersonalna" },
+            { id: 38, text: "Jestem dobry w uczeniu się na swoich błędach i doświadczeniach.", type: "Intrapersonalna" },
+            { id: 39, text: "Prowadzę pamiętnik lub zapiski.", type: "Intrapersonalna" },
+            { id: 40, text: "Przejmuję się losami naszej planety.", type: "Intrapersonalna" }
+        ];
+
+        const profilesInfo = {
+            "Matematyczno-logiczna": {
+                desc: "Myślisz przyczynowo-skutkowo. Świetnie radzisz sobie z analizą danych, rozwiązywaniem problemów i liczeniem. Fascynuje Cię to, jak działają systemy i maszyny.",
+                subjects: "Matematyka, Fizyka, Chemia, Informatyka.",
+                jobs: "Programista, analityk danych, inżynier (np. robotyki), księgowy, architekt systemów IT, naukowiec, logistyk.",
+                schools: "Licea ogólnokształcące (profile mat-fiz, np. V LO, I LO w Krakowie), Technikum Łączności, Technikum Informatyczne. Studia: AGH, Politechnika Krakowska, UJ."
+            },
+            "Językowa": {
+                desc: "Masz łatwość w posługiwaniu się słowem – w mowie i w piśmie. Lubisz czytać, pisać i dyskutować. Łatwo uczysz się języków obcych.",
+                subjects: "Język polski, Języki obce, Historia, WOS.",
+                jobs: "Dziennikarz, tłumacz, pisarz, prawnik, copywriter, nauczyciel, specjalista ds. PR.",
+                schools: "Licea ogólnokształcące (profile humanistyczne, prawnicze, dwujęzyczne, np. II LO, VI LO). Studia: UJ (Prawo, Dziennikarstwo, Filologie), UKEN."
+            },
+            "Ruchowa": {
+                desc: "Najlepiej uczysz się przez działanie i ruch. Masz świetną koordynację ciała i/lub wysokie zdolności manualne. Często potrzebujesz aktywności fizycznej.",
+                subjects: "Wychowanie Fizyczne, Biologia (anatomia), Edukacja dla Bezpieczeństwa, zajęcia praktyczne.",
+                jobs: "Fizjoterapeuta, ratownik medyczny, oficer służb mundurowych, chirurg, aktor, mechanik, trener.",
+                schools: "Szkoły Mistrzostwa Sportowego, klasy mundurowe (np. XXV LO), Technika mechaniczne. Studia: AWF, Collegium Medicum UJ, AST."
+            },
+            "Muzyczna": {
+                desc: "Słyszysz rytm i melodię tam, gdzie inni słyszą hałas. Masz dobrą pamięć słuchową. Dźwięki i muzyka są dla Ciebie naturalnym środowiskiem.",
+                subjects: "Muzyka, Historia sztuki, Języki obce (łatwość w naśladowaniu akcentu).",
+                jobs: "Muzyk, kompozytor, realizator dźwięku, inżynier akustyk, producent muzyczny.",
+                schools: "Państwowe Szkoły Muzyczne II stopnia, Licea artystyczne. Studia: Akademia Muzyczna im. K. Pendereckiego w Krakowie."
+            },
+            "Interpersonalna": {
+                desc: "Świetnie rozumiesz innych ludzi. Potrafisz słuchać, współpracować i często naturalnie pełnisz rolę lidera, mediatora lub organizatora w grupie.",
+                subjects: "WOS, Historia, Język polski, Etyka.",
+                jobs: "Psycholog, menedżer, specjalista HR, doradca zawodowy, handlowiec, terapeuta.",
+                schools: "Licea (profile społeczne, psychologiczne, menedżerskie, np. VIII LO, III LO). Studia: UJ (Psychologia, Socjologia), UEK (Zarządzanie)."
+            },
+            "Wizualno-przestrzenna": {
+                desc: "Myślisz obrazami. Świetnie orientujesz się w przestrzeni, lubisz rysować, fotografować lub projektować. Posiadasz rozwinięty zmysł estetyczny.",
+                subjects: "Plastyka, Informatyka (grafika), Geografia, Geometria.",
+                jobs: "Architekt, grafik komputerowy, projektant wnętrz/mody, fotograf, twórca gier (Game Dev).",
+                schools: "Państwowe Liceum Sztuk Plastycznych, Technika Budowlane, technika (grafika i poligrafia cyfrowa). Studia: ASP, Politechnika Krakowska, AGH."
+            },
+            "Przyrodnicza": {
+                desc: "Fascynuje Cię świat roślin, zwierząt i zjawisk naturalnych. Jesteś bardzo spostrzegawczy w środowisku naturalnym i wykazujesz troskę o ekologię.",
+                subjects: "Biologia, Chemia, Geografia.",
+                jobs: "Lekarz weterynarii, biolog, ekolog, dietetyk, leśnik, biotechnolog.",
+                schools: "Licea (profile biol-chem, np. II LO, V LO), Technika Ochrony Środowiska, Technika Weterynaryjne. Studia: Uniwersytet Rolniczy, Collegium Medicum UJ."
+            },
+            "Intrapersonalna": {
+                desc: "Doskonale znasz siebie, swoje mocne i słabe strony. Preferujesz pracę samodzielną, dużo analizujesz. Posiadasz silne poczucie niezależności.",
+                subjects: "Filozofia, Etyka, Język polski, praca własna.",
+                jobs: "Naukowiec, programista, analityk, przedsiębiorca, badacz, filozof, freelancer.",
+                schools: "Szkoły stawiające na indywidualne podejście, edukacja domowa, szkoły autorskie. Studia: UJ (Filozofia, Kognitywistyka), UEK (biznes i startupy)."
+            }
+        };
+
+        const answers = {};
+        const container = document.getElementById('questions-container');
+        const progressBar = document.getElementById('progress-bar');
+        const progressText = document.getElementById('progress-text');
+        const calculateBtn = document.getElementById('calculate-btn');
+        const errorMsg = document.getElementById('error-msg');
+
+        // Renderowanie pytań
+        questions.forEach((q, index) => {
+            const div = document.createElement('div');
+            div.className = 'bg-white p-5 md:p-8 rounded-2xl shadow-sm border border-slate-200 transition-all hover:shadow-md';
+            
+            let html = `
+                <div class="mb-5 flex flex-col md:flex-row md:items-start gap-3">
+                    <span class="shrink-0 bg-slate-100 text-slate-500 text-xs px-3 py-1.5 rounded-lg font-bold">#${q.id}</span>
+                    <p class="text-lg font-medium text-slate-800 leading-snug">${q.text}</p>
+                </div>
+                <div class="flex justify-between items-center w-full gap-2 mt-4">
+            `;
+
+            for (let i = 0; i <= 5; i++) {
+                html += `
+                    <button class="scale-btn flex-1 py-3 md:py-4 border rounded-xl text-slate-600 font-semibold hover:bg-slate-50 focus:outline-none bg-white" 
+                            data-qid="${q.id}" data-val="${i}">
+                        ${i}
+                    </button>
+                `;
+            }
+
+            html += `</div>
+                <div class="flex justify-between text-xs font-medium text-slate-400 mt-3 px-1">
+                    <span>Nie pasuje</span>
+                    <span>Bardzo pasuje</span>
+                </div>
+            `;
+            
+            div.innerHTML = html;
+            container.appendChild(div);
+        });
+
+        // Obsługa odpowiedzi
+        container.addEventListener('click', (e) => {
+            if (e.target.tagName === 'BUTTON' && e.target.classList.contains('scale-btn')) {
+                const qid = e.target.getAttribute('data-qid');
+                const val = parseInt(e.target.getAttribute('data-val'));
+                answers[qid] = val;
+
+                const parent = e.target.parentElement;
+                parent.querySelectorAll('.scale-btn').forEach(btn => {
+                    btn.classList.remove('selected');
+                });
+                e.target.classList.add('selected');
+
+                updateProgress();
+            }
+        });
+
+        function updateProgress() {
+            const answeredCount = Object.keys(answers).length;
+            const total = questions.length;
+            const percentage = (answeredCount / total) * 100;
+            
+            progressBar.style.width = `${percentage}%`;
+            progressText.innerText = `${answeredCount} / ${total}`;
+
+            if (answeredCount === total) {
+                calculateBtn.disabled = false;
+                errorMsg.classList.add('hidden');
+                calculateBtn.classList.add('animate-pulse');
+                setTimeout(() => calculateBtn.classList.remove('animate-pulse'), 1500);
+            }
+        }
+
+        calculateBtn.addEventListener('click', () => {
+            if (Object.keys(answers).length < questions.length) {
+                errorMsg.classList.remove('hidden');
+                return;
+            }
+            const results = {};
+            questions.forEach(q => {
+                if (!results[q.type]) results[q.type] = 0;
+                results[q.type] += answers[q.id];
+            });
+            showResults(results);
+        });
+
+        function showResults(results) {
+            document.getElementById('results-section').classList.remove('hidden');
+            document.getElementById('calculate-btn').parentElement.classList.add('hidden');
+            document.getElementById('progress-container').classList.add('hidden');
+            
+            document.getElementById('results-section').scrollIntoView({ behavior: 'smooth' });
+
+            const labels = Object.keys(results);
+            const dataPoints = Object.values(results);
+
+            // Wykres
+            const ctx = document.getElementById('resultsChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Liczba punktów',
+                        data: dataPoints,
+                        backgroundColor: 'rgba(37, 99, 235, 0.85)',
+                        hoverBackgroundColor: 'rgba(29, 78, 216, 1)',
+                        borderRadius: 6,
+                        barThickness: 'flex'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 25,
+                            grid: { borderDash: [4, 4] }
+                        },
+                        x: { grid: { display: false } }
+                    },
+                    plugins: { legend: { display: false } }
+                }
+            });
+
+            // Podział wyników (posortowane malejąco)
+            const sortedResults = Object.entries(results).sort((a, b) => b[1] - a[1]);
+            
+            const topContainer = document.getElementById('top-results');
+            const otherContainer = document.getElementById('other-results');
+            
+            topContainer.innerHTML = '';
+            otherContainer.innerHTML = '';
+
+            sortedResults.forEach((item, index) => {
+                const [type, score] = item;
+                const info = profilesInfo[type];
+                const percentage = (score / 25) * 100;
+                
+                // Trzy dominujące typy (duże karty)
+                if (index < 3) {
+                    let medalColor = index === 0 ? 'bg-amber-400 text-amber-900' : 
+                                     index === 1 ? 'bg-slate-300 text-slate-800' : 
+                                     'bg-orange-300 text-orange-900';
+                    let rank = index === 0 ? '1. MIEJSCE' : index === 1 ? '2. MIEJSCE' : '3. MIEJSCE';
+
+                    const card = document.createElement('div');
+                    card.className = `bg-white p-6 md:p-8 rounded-2xl shadow-sm border ${index === 0 ? 'border-blue-400 ring-1 ring-blue-400' : 'border-slate-200'} print-card`;
+                    
+                    card.innerHTML = `
+                        <div class="flex flex-col sm:flex-row justify-between sm:items-center mb-6 gap-4">
+                            <div>
+                                <span class="inline-block px-3 py-1 rounded-md text-xs font-bold mb-2 ${medalColor}">${rank}</span>
+                                <h4 class="text-2xl font-bold text-slate-800">Inteligencja ${type}</h4>
+                            </div>
+                            <div class="text-right">
+                                <span class="text-3xl font-extrabold text-blue-600">${score}</span><span class="text-slate-500 font-medium">/25 pkt</span>
+                            </div>
+                        </div>
+                        <p class="text-slate-700 text-lg leading-relaxed mb-6">${info.desc}</p>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                            <div class="bg-slate-50 p-5 rounded-xl border border-slate-100">
+                                <h5 class="font-bold text-slate-800 text-sm uppercase mb-2 flex items-center gap-2"><span class="text-blue-500">📚</span> Przedmioty</h5>
+                                <p class="text-sm text-slate-600">${info.subjects}</p>
+                            </div>
+                            <div class="bg-slate-50 p-5 rounded-xl border border-slate-100">
+                                <h5 class="font-bold text-slate-800 text-sm uppercase mb-2 flex items-center gap-2"><span class="text-blue-500">💼</span> Zawody</h5>
+                                <p class="text-sm text-slate-600">${info.jobs}</p>
+                            </div>
+                        </div>
+                        <div class="bg-blue-50/50 p-5 rounded-xl border border-blue-100">
+                            <h5 class="font-bold text-blue-900 text-sm uppercase mb-2">Kierunki i Szkoły (Kraków)</h5>
+                            <p class="text-sm text-slate-700 leading-relaxed">${info.schools}</p>
+                        </div>
+                    `;
+                    topContainer.appendChild(card);
+                } 
+                // Pozostałe 5 typów (mniejsze karty)
+                else {
+                    const card = document.createElement('div');
+                    card.className = `bg-white p-5 rounded-xl shadow-sm border border-slate-200 print-card`;
+                    
+                    card.innerHTML = `
+                        <div class="flex justify-between items-center mb-3">
+                            <h4 class="text-lg font-bold text-slate-800">${index + 1}. Inteligencja ${type}</h4>
+                            <span class="font-bold text-slate-600">${score}/25 pkt</span>
+                        </div>
+                        <div class="w-full bg-slate-100 rounded-full h-1.5 mb-4">
+                            <div class="bg-slate-400 h-1.5 rounded-full" style="width: ${percentage}%"></div>
+                        </div>
+                        <p class="text-sm text-slate-600 mb-3">${info.desc}</p>
+                        <div class="text-xs text-slate-500">
+                            <strong>Przedmioty:</strong> ${info.subjects}<br>
+                            <strong>Zawody:</strong> ${info.jobs}
+                        </div>
+                    `;
+                    otherContainer.appendChild(card);
+                }
+            });
+        }
+    </script>
+</body>
+</html>
